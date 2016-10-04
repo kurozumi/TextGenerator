@@ -6,34 +6,45 @@ import MeCab
 from collections import defaultdict
 
 
-class Tokenizer(object):
-    
+class MA(object):
+
     def __init__(self):
         # 形態素解析用タガー
         self.tagger = MeCab.Tagger('-Ochasen')
-        
-    def tokenize(self, sentence):
+
+    def parse(self, sentence):
         morphemes = []
-        
+
         self.tagger.parse("")
         node = self.tagger.parseToNode(sentence)
-        
+
         while node:
             if node.posid != 0:
                 morphemes.append(node.surface)
             node = node.next
         return morphemes
 
+    def splitlines(self, sentence):
+        # 改行文字以外の分割文字（正規表現表記）
+        delimiter = "。|．|\."
+
+        # 全ての分割文字を改行文字に置換（splitしたときに「。」などの情報を無くさないため）
+        sentence = re.sub(r"({0})".format(delimiter), r"\1\n", sentence)
+
+        # 改行文字で分割
+        for sentence in sentence.splitlines():
+            yield sentence
+
+
 class NGram(object):
 
     BEGIN = "__BEGIN_SENTENCE__"
-    END   = "__END_SENTENCE__"
+    END = "__END_SENTENCE__"
 
-
-    def freqs(self, token, N=3):
+    def fit(self, token, N=3):
 
         freqs = defaultdict(int)
-        
+
         if len(token) < N:
             return {}
 
@@ -54,18 +65,25 @@ class NGram(object):
 
         return freqs
 
-class Chain(object):
+    def begin(self, tuple, N):
+        gram = [self.BEGIN]
+        gram.extend(tuple[0:N-1])
 
+
+    def predict(self):
+        pass
+
+
+class Chain(object):
 
     DB_PATH = "chain.db"
     DB_SCHEMA_PATH = "schema.sql"
-    
+
     def __init__(self, sentence):
 
         if isinstance(sentence, bytes):
             sentence = sentence.decode("utf-8")
         self.sentence = sentence
-
 
     def fit(self, N=3):
         """
@@ -87,27 +105,6 @@ class Chain(object):
                 freqs[gram] += n
 
         return freqs
-
-    def split(self, sentence):
-        """
-        「。」や改行などで区切られた長い文章を一文ずつに分ける
-        @param text 分割前の文章
-        @return 一文ずつの配列
-        """
-        # 改行文字以外の分割文字（正規表現表記）
-        delimiter = "。|．|\."
-
-        # 全ての分割文字を改行文字に置換（splitしたときに「。」などの情報を無くさないため）
-        sentence = re.sub(r"({0})".format(delimiter), r"\1\n", sentence)
-
-        # 改行文字で分割
-        sentences = sentence.splitlines()
-
-        # 前後の空白文字を削除
-        sentences = [sentence.strip() for sentence in sentences]
-
-        return sentences
-
 
 
     def save(self, triplet_freqs, init=False):
@@ -179,7 +176,13 @@ if __name__ == '__main__':
 　私はこの想像を熱心に追求した。「そうしたらあの気詰まりな丸善も粉葉みじんだろう」
 　そして私は活動写真の看板画が奇体な趣きで街を彩っている京極を下って行った。"""
 
-    chain = Chain(sentence)
-    freqs = chain.fit()
-    chain.show(freqs)
-    #chain.save(freqs, True)
+    # chain = Chain(sentence)
+    # freqs = chain.fit()
+    # chain.show(freqs)
+    # chain.save(freqs, True)
+
+    ma = MA()
+    ngram = NGram()
+    for sentence in ma.splitlines(sentence):
+        # print(ma.parse(sentence))
+        print(ngram.fit(ma.parse(sentence)))
