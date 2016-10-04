@@ -2,15 +2,60 @@
 
 import re
 import MeCab
-import sqlite3
 
 from collections import defaultdict
 
 
-class Chain(object):
+class Tokenizer(object):
+    
+    def __init__(self):
+        # 形態素解析用タガー
+        self.tagger = MeCab.Tagger('-Ochasen')
+        
+    def tokenize(self, sentence):
+        morphemes = []
+        
+        self.tagger.parse("")
+        node = self.tagger.parseToNode(sentence)
+        
+        while node:
+            if node.posid != 0:
+                morphemes.append(node.surface)
+            node = node.next
+        return morphemes
+
+class NGram(object):
 
     BEGIN = "__BEGIN_SENTENCE__"
     END   = "__END_SENTENCE__"
+
+
+    def freqs(self, token, N=3):
+
+        freqs = defaultdict(int)
+        
+        if len(token) < N:
+            return {}
+
+        # 繰り返し
+        for i in range(len(token)-N+1):
+            gram = tuple(token[i:i+N])
+            freqs[gram] += 1
+
+        # beginを追加
+        gram = [self.BEGIN]
+        gram.extend(token[0:N-1])
+        freqs[tuple(gram)] = 1
+
+        # endを追加
+        gram = token[-(N-1):]
+        gram.extend([self.END])
+        freqs[tuple(gram)] = 1
+
+        return freqs
+
+class Chain(object):
+
 
     DB_PATH = "chain.db"
     DB_SCHEMA_PATH = "schema.sql"
@@ -21,8 +66,6 @@ class Chain(object):
             sentence = sentence.decode("utf-8")
         self.sentence = sentence
 
-        # 形態素解析用タガー
-        self.tagger = MeCab.Tagger('-Ochasen')
 
     def fit(self, N=3):
         """
@@ -38,9 +81,9 @@ class Chain(object):
         # センテンス毎にN組にする
         for sentence in sentences:
             # 形態素解析
-            morphemes = self._parse(sentence)
+            token = Tokenizer().tokenize(sentence)
             # 出現回数を加算
-            for gram, n in self._ngram(morphemes, N=self.N).items():
+            for gram, n in NGram().freqs(token, N=N).items():
                 freqs[gram] += n
 
         return freqs
@@ -65,50 +108,7 @@ class Chain(object):
 
         return sentences
 
-    def _parse(self, sentence):
-        """
-        一文を形態素解析する
-        @param sentence 一文
-        @return 形態素で分割された配列
-        """
-        morphemes = []
-        #self.tagger.parse("")
-        node = self.tagger.parseToNode(sentence)
-        while node:
-            if node.posid != 0:
-                morphemes.append(node.surface)
-            node = node.next
-        return morphemes
 
-    def _ngram(self, morphemes, N):
-        """
-        形態素解析で分割された配列を、形態素毎にN組にしてその出現回数を数える
-        @param morphemes 形態素配列
-        @return N組とその出現回数の辞書 key: N組（タプル） val: 出現回数
-        """
-        # N組をつくれない場合は終える
-        if len(morphemes) < N:
-            return {}
-
-        # 出現回数の辞書
-        freqs = defaultdict(int)
-
-        # 繰り返し
-        for i in range(len(morphemes)-N+1):
-            gram = tuple(morphemes[i:i+N])
-            freqs[gram] += 1
-
-        # beginを追加
-        gram = [self.BEGIN]
-        gram.extend(morphemes[0:N-1])
-        freqs[tuple(gram)] = 1
-
-        # endを追加
-        gram = morphemes[-(N-1):]
-        gram.extend([self.END])
-        freqs[tuple(gram)] = 1
-
-        return freqs
 
     def save(self, triplet_freqs, init=False):
         u"""
@@ -181,5 +181,5 @@ if __name__ == '__main__':
 
     chain = Chain(sentence)
     freqs = chain.fit()
-    #print(chain.show(freqs))
-    chain.save(freqs, True)
+    chain.show(freqs)
+    #chain.save(freqs, True)
