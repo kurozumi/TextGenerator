@@ -40,7 +40,7 @@ class GenerateText(object):
         generated_text = u""
 
         # 指定の数だけ作成する
-        for i in xrange(self.n):
+        for i in range(self.n):
             text = self._generate_sentence(con)
             generated_text += text
 
@@ -146,7 +146,7 @@ class GenerateText(object):
 
         # 確率に合うように、インデックスを入れる
         for (index, chain) in enumerate(chains):
-            for j in xrange(chain["freq"]):
+            for j in range(chain["freq"]):
                 probability.append(index)
 
         # ランダムに1つを選ぶ
@@ -157,7 +157,7 @@ class GenerateText(object):
 
 if __name__ == '__main__':
     generator = GenerateText()
-    print generator.generate()
+    print(generator.generate())
 
 
 
