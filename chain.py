@@ -65,10 +65,12 @@ class NGram(object):
 
         return freqs
 
-    def begin(self, tuple, N):
+    def begin(self, data, N):
         gram = [self.BEGIN]
-        gram.extend(tuple[0:N-1])
+        gram.extend(data[0:N-1])
 
+    def end(self, data, N):
+        pass
 
     def predict(self):
         pass
@@ -186,3 +188,4 @@ if __name__ == '__main__':
     for sentence in ma.splitlines(sentence):
         # print(ma.parse(sentence))
         print(ngram.fit(ma.parse(sentence)))
+        print("======")
