@@ -8,7 +8,7 @@ import os.path
 import sqlite3
 import random
 
-from PrepareChain import PrepareChain
+from chain import Chain, BEGIN, END
 
 
 class GenerateText(object):
@@ -29,11 +29,11 @@ class GenerateText(object):
         @return 生成された文章
         """
         # DBが存在しないときは例外をあげる
-        if not os.path.exists(PrepareChain.DB_PATH):
+        if not os.path.exists(Chain.DB_PATH):
             raise IOError(u"DBファイルが存在しません")
 
         # DBオープン
-        con = sqlite3.connect(PrepareChain.DB_PATH)
+        con = sqlite3.connect(Chain.DB_PATH)
         con.row_factory = sqlite3.Row
 
         # 最終的にできる文章
@@ -64,7 +64,7 @@ class GenerateText(object):
         morphemes.append(first_triplet[2])
 
         # 文章を紡いでいく
-        while morphemes[-1] != PrepareChain.END:
+        while morphemes[-1] != END:
             prefix1 = morphemes[-2]
             prefix2 = morphemes[-1]
             triplet = self._get_triplet(con, prefix1, prefix2)
@@ -106,7 +106,7 @@ class GenerateText(object):
         @return 文章のはじまりの3つ組のタプル
         """
         # BEGINをprefix1としてチェーンを取得
-        prefixes = (PrepareChain.BEGIN,)
+        prefixes = (BEGIN,)
 
         # チェーン情報を取得
         chains = self._get_chain_from_DB(con, prefixes)
