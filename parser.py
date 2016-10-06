@@ -2,27 +2,46 @@
 
 import re
 import MeCab
+import sqlite3
 
 from collections import defaultdict
 
+BEGIN = "__BIGIN__"
+END = "__END__"
 
-class MA(object):
+
+class Chain(object):
 
     def __init__(self):
         # 形態素解析用タガー
         self.tagger = MeCab.Tagger('-Ochasen')
 
     def parse(self, sentence):
-        morphemes = []
+        words = [BEGIN]
 
         self.tagger.parse("")
         node = self.tagger.parseToNode(sentence)
 
         while node:
             if node.posid != 0:
-                morphemes.append(node.surface)
+                words.append(node.surface)
             node = node.next
-        return morphemes
+        words.append(END)
+        
+        return words
+
+    def ngram(self, words, N=3):
+
+        model = defaultdict(int)
+
+        if len(words) < N:
+            return {}
+
+        # 繰り返し
+        for i in range(len(words)-N+1):
+            model[tuple(words[i:i+N])] += 1
+
+        return model 
 
     def splitlines(self, sentence):
         # 改行文字以外の分割文字（正規表現表記）
@@ -35,85 +54,30 @@ class MA(object):
         for sentence in sentence.splitlines():
             yield sentence
 
+    def fit(self,sentence, N=3):
 
-class NGram(object):
+        model = defaultdict(int)
+        
+        for sentence in self.splitlines(sentence):
+            # 文章を単語に分ける
+            words = self.parse(sentence)
+            # N-Gramモデルを作り出現頻度をカウントする 
+            words = self.ngram(words, N=N)
 
-    BEGIN = "__BEGIN_SENTENCE__"
-    END = "__END_SENTENCE__"
+            for (word,n) in words.items():
+                model[word] += n
 
-    def fit(self, token, N=3):
-
-        freqs = defaultdict(int)
-
-        if len(token) < N:
-            return {}
-
-        # 繰り返し
-        for i in range(len(token)-N+1):
-            gram = tuple(token[i:i+N])
-            freqs[gram] += 1
-
-        # beginを追加
-        gram = [self.BEGIN]
-        gram.extend(token[0:N-1])
-        freqs[tuple(gram)] = 1
-
-        # endを追加
-        gram = token[-(N-1):]
-        gram.extend([self.END])
-        freqs[tuple(gram)] = 1
-
-        return freqs
-
-    def begin(self, data, N):
-        gram = [self.BEGIN]
-        gram.extend(data[0:N-1])
-
-    def end(self, data, N):
-        pass
-
-    def predict(self):
-        pass
-
-
-class Chain(object):
-
+        return model
+ 
     DB_PATH = "chain.db"
     DB_SCHEMA_PATH = "schema.sql"
-
-    def __init__(self, sentence):
-
-        if isinstance(sentence, bytes):
-            sentence = sentence.decode("utf-8")
-        self.sentence = sentence
-
-    def fit(self, N=3):
-        """
-        形態素解析からN組の出現回数まで
-        @return 3つ組とその出現回数の辞書 key: N組（タプル） val: 出現回数
-        """
-        # 長い文章をセンテンス毎に分割
-        sentences = self.split(self.sentence)
-
-        # N組の出現回数
-        freqs = defaultdict(int)
-
-        # センテンス毎にN組にする
-        for sentence in sentences:
-            # 形態素解析
-            token = Tokenizer().tokenize(sentence)
-            # 出現回数を加算
-            for gram, n in NGram().freqs(token, N=N).items():
-                freqs[gram] += n
-
-        return freqs
-
-
+    
     def save(self, triplet_freqs, init=False):
         u"""
         3つ組毎に出現回数をDBに保存
         @param triplet_freqs 3つ組とその出現回数の辞書 key: 3つ組（タプル） val: 出現回数
         """
+        
         # DBオープン
         con = sqlite3.connect(self.DB_PATH)
 
@@ -135,13 +99,9 @@ class Chain(object):
         con.commit()
         con.close()
 
-    def show(self, freqs):
-        """
-        3つ組毎の出現回数を出力する
-        @param triplet_freqs 3つ組とその出現回数の辞書 key: 3つ組（タプル） val: 出現回数
-        """
-        for freq in freqs:
-            print("|".join(freq), "\t", freqs[freq])
+    def show(self, words):
+        for word in words:
+            print("|".join(word), "\t", words[word])
             print("=====")
 
 
@@ -183,9 +143,7 @@ if __name__ == '__main__':
     # chain.show(freqs)
     # chain.save(freqs, True)
 
-    ma = MA()
-    ngram = NGram()
-    for sentence in ma.splitlines(sentence):
-        # print(ma.parse(sentence))
-        print(ngram.fit(ma.parse(sentence)))
-        print("======")
+    chain = Chain()
+    result = chain.fit(sentence)
+    # chain.show(result)
+    chain.save(result, True)
