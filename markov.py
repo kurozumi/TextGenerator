@@ -42,7 +42,7 @@ class GenerateText(object):
         # 指定の数だけ作成する
         for i in range(self.n):
             text = self._generate_sentence(con)
-            generated_text += text
+            generated_text += "{}\n".format(text)
 
         # DBクローズ
         con.close()
