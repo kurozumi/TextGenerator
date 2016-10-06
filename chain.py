@@ -54,11 +54,11 @@ class Chain(object):
         for sentence in sentence.splitlines():
             yield sentence
 
-    def fit(self,sentence, N=3):
+    def fit(self, sentence, N=3):
 
         model = defaultdict(int)
-        
         for sentence in self.splitlines(sentence):
+            print(sentence)
             # 文章を単語に分ける
             words = self.parse(sentence)
             # N-Gramモデルを作り出現頻度をカウントする 
@@ -107,62 +107,13 @@ class Chain(object):
 
 if __name__ == '__main__':
 
-    # 『檸檬』梶井基次郎
-    sentence = """仲間達よ立ち上がれ
-
-今日の勝利つかもうぜ
-
-共に戦おう
-
-拳を突き上げろ
-
-今だ本物の英雄になりに行こう
-
-夢が叶うまで全力で走り抜け
-
-
-オーオーオー、我等は生きる
-
-オーオーオー、オー！ファジの為
-
-オー！ファジの為
-
-オー！ファジの為
-
-オー！ファジの為
-
-
-全てはファジの為
-
-全てはファジの為
-
-全てはファジの為
-
-全てはファジの為
-
-
-シャララーラ
-
-シャララーラ
-
-シャララーラ
-
-シャララーラ
-
-シャララーラ
-
-シャララーラ
-
-シャララーラ
-
-シャララーラ"""
-
-    # chain = Chain(sentence)
-    # freqs = chain.fit()
-    # chain.show(freqs)
-    # chain.save(freqs, True)
-
+    import csv
     chain = Chain()
+    sentence = []
+    with open("chant.csv") as f:
+        for chant in csv.reader(f):
+            sentence.append(chant)
+
     result = chain.fit(sentence)
     chain.show(result)
     # chain.save(result, True)

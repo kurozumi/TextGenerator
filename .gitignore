@@ -1,3 +1,4 @@
 chain.db
 *.pyc
-
+*.csv
+db.py
